@@ -32,3 +32,48 @@ def create_demand(
 @router.get("/", response_model=list[DemandRead])
 def get_demands(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     return crud_demand.get_multi(db, skip, limit)
+
+
+@router.get("/{demand_id}", response_model=DemandRead)
+def get_demand(demand_id: int, db: Session = Depends(get_db)):
+    demand = crud_demand.get(db, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    return demand
+
+
+@router.put("/{demand_id}", response_model=DemandRead)
+def update_demand(
+    demand_id: int,
+    demand_in: DemandCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    demand = crud_demand.get(db, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    if demand.acheteur_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Vous ne pouvez modifier que vos propres demandes"
+        )
+
+    demand_dict = demand_in.model_dump(exclude_unset=True)
+    return crud_demand.update(db, demand_id, demand_dict)
+
+
+@router.delete("/{demand_id}")
+def delete_demand(
+    demand_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    demand = crud_demand.get(db, demand_id)
+    if not demand:
+        raise HTTPException(status_code=404, detail="Demande non trouvée")
+    if demand.acheteur_id != current_user.id:
+        raise HTTPException(
+            status_code=403, detail="Vous ne pouvez supprimer que vos propres demandes"
+        )
+
+    crud_demand.delete(db, demand_id)
+    return {"message": "Demande supprimée avec succès"}
