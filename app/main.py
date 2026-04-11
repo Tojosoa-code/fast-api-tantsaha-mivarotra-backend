@@ -5,9 +5,6 @@ from app.routers import routes
 from app.routers.matches import product_trie  # ← important
 from app.models.product import Product
 
-# Création des tables
-Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
     title="Tantsaha Mivarotra API",
     description="Plateforme de commerce agricole - Backend FastAPI",

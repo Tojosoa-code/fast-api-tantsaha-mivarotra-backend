@@ -5,7 +5,8 @@ from app.core.security import get_password_hash, create_access_token, verify_pas
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead
 
-router = APIRouter(prefix="/auth", tags=["Auth"])
+router = APIRouter()
+
 
 @router.post("/register", response_model=UserRead)
 def register(user_in: UserCreate, db: Session = Depends(get_db)):
@@ -20,6 +21,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
+
 
 @router.post("/login")
 def login(email: str, password: str, db: Session = Depends(get_db)):
