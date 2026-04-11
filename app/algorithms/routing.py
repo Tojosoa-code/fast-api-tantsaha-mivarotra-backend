@@ -1,6 +1,7 @@
 from typing import List, Dict
 from app.utils.geo import haversine
 
+
 def nearest_neighbor_tsp(points: List[Dict], start_idx: int = 0) -> Dict:
     """Retourne l'ordre optimal de visite + distance totale"""
     n = len(points)
@@ -15,12 +16,14 @@ def nearest_neighbor_tsp(points: List[Dict], start_idx: int = 0) -> Dict:
 
     for _ in range(n - 1):
         nearest = -1
-        min_dist = float('inf')
+        min_dist = float("inf")
         for i in range(n):
             if not visited[i]:
                 dist = haversine(
-                    points[current]["latitude"], points[current]["longitude"],
-                    points[i]["latitude"], points[i]["longitude"]
+                    points[current]["latitude"],
+                    points[current]["longitude"],
+                    points[i]["latitude"],
+                    points[i]["longitude"],
                 )
                 if dist < min_dist:
                     min_dist = dist
@@ -32,13 +35,15 @@ def nearest_neighbor_tsp(points: List[Dict], start_idx: int = 0) -> Dict:
 
     # Retour au point de départ (optionnel pour les livraisons)
     total_distance += haversine(
-        points[current]["latitude"], points[current]["longitude"],
-        points[start_idx]["latitude"], points[start_idx]["longitude"]
+        points[current]["latitude"],
+        points[current]["longitude"],
+        points[start_idx]["latitude"],
+        points[start_idx]["longitude"],
     )
     path.append(start_idx)
 
     return {
-        "path": path,                    # ordre des indices
+        "path": path,  # ordre des indices
         "total_distance_km": round(total_distance, 2),
-        "points": points                 # pour affichage facile
+        "points": points,  # pour affichage facile
     }

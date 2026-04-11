@@ -4,13 +4,18 @@ from app.core.database import get_db
 from app.models.product import Product
 from app.schemas.product import ProductCreate, ProductRead
 from app.crud.base import CRUDBase
+from app.algorithms.trie import product_trie
 
 router = APIRouter()
 crud_product = CRUDBase(Product)
 
+
 @router.post("/", response_model=ProductRead)
 def create_product(product_in: ProductCreate, db: Session = Depends(get_db)):
-    return crud_product.create(db, product_in.model_dump())
+    product = crud_product.create(db, product_in.model_dump())
+    product_trie.insert(product.nom, product.id)
+    return product
+
 
 @router.get("/", response_model=list[ProductRead])
 def get_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):

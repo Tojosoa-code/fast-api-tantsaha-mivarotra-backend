@@ -5,6 +5,13 @@ from app.models.demand import Demand
 from app.models.match import Match
 from app.utils.geo import haversine
 
+"""
+Note de compatibilité (0-100) :
+- Distance : 35% (100 si <5km, décroissant ensuite)
+- Prix : 40% (100 si dans le budget, décroissant si au-dessus)
+- Quantité : 25% (100 si offre >= demande, sinon proportionnel)
+"""
+
 
 def calculate_matching_score(offer: Dict, demand: Dict) -> float:
     dist_km = haversine(
