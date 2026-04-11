@@ -35,3 +35,6 @@ class ProductTrie:
         for child in node.children.values():
             results.extend(self._collect_all_ids(child))
         return results
+
+
+product_trie = ProductTrie()
