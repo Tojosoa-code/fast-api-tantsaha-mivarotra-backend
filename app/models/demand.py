@@ -1,6 +1,17 @@
-from sqlalchemy import Column, Integer, Float, DateTime, Date, String, ForeignKey, DECIMAL
+from sqlalchemy import (
+    Column,
+    Integer,
+    Float,
+    DateTime,
+    Date,
+    String,
+    ForeignKey,
+    DECIMAL,
+)
 from sqlalchemy.sql import func
 from app.core.database import Base
+from sqlalchemy.orm import relationship
+
 
 class Demand(Base):
     __tablename__ = "demands"
@@ -16,3 +27,6 @@ class Demand(Base):
     date_souhaitee = Column(Date)
     statut = Column(String(20), default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    acheteur = relationship("User")
+    product = relationship("Product")

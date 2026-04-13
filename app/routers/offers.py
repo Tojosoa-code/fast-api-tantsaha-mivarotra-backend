@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import asc, desc
+from typing import Optional
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.offer import Offer
@@ -26,17 +28,71 @@ def create_offer(
     offer_dict["producteur_id"] = current_user.id
     offer_dict["region"] = current_user.region
 
-    return crud_offer.create(db, offer_dict)
+    offer = crud_offer.create(db, offer_dict)
+
+    # Retourner avec les relations
+    return (
+        db.query(Offer)
+        .options(joinedload(Offer.product), joinedload(Offer.producteur))
+        .filter(Offer.id == offer.id)
+        .first()
+    )
 
 
-@router.get("/", response_model=list[OfferRead])
-def get_offers(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud_offer.get_multi(db, skip, limit)
+@router.get("/")
+def get_offers(
+    db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(12, ge=1, le=100),
+    region: Optional[str] = None,
+    sort_by: str = "created_at",
+    sort_order: str = "desc",
+):
+    query = db.query(Offer).options(
+        joinedload(Offer.product), joinedload(Offer.producteur)
+    )
+
+    # ✅ FILTRE REGION
+    if region:
+        query = query.filter(Offer.region == region)
+
+    # ✅ TRI DYNAMIQUE
+    sort_column_map = {
+        "created_at": Offer.created_at,
+        "prix_unitaire": Offer.prix_unitaire,
+        "quantite": Offer.quantite,
+    }
+
+    sort_column = sort_column_map.get(sort_by, Offer.created_at)
+
+    if sort_order == "asc":
+        query = query.order_by(asc(sort_column))
+    else:
+        query = query.order_by(desc(sort_column))
+
+    # ✅ TOTAL AVANT PAGINATION
+    total = query.count()
+
+    # ✅ PAGINATION
+    offers = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {
+        "items": offers,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+    }
 
 
 @router.get("/{offer_id}", response_model=OfferRead)
 def get_offer(offer_id: int, db: Session = Depends(get_db)):
-    offer = crud_offer.get(db, offer_id)
+    offer = (
+        db.query(Offer)
+        .options(joinedload(Offer.product), joinedload(Offer.producteur))
+        .filter(Offer.id == offer_id)
+        .first()
+    )
     if not offer:
         raise HTTPException(status_code=404, detail="Offre non trouvée")
     return offer

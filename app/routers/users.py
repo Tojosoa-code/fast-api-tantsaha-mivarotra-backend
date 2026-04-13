@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from app.core.database import get_db
 from app.core.security import get_current_user
 from app.models.user import User
@@ -15,15 +15,21 @@ router = APIRouter()
 def get_my_offers(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    """Retourne toutes les offres du producteur connecté"""
-    offers = db.query(Offer).filter(Offer.producteur_id == current_user.id).all()
-    return offers
+    return (
+        db.query(Offer)
+        .options(joinedload(Offer.product), joinedload(Offer.producteur))
+        .filter(Offer.producteur_id == current_user.id)
+        .all()
+    )
 
 
 @router.get("/me/demands", response_model=list[DemandRead])
 def get_my_demands(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    """Retourne toutes les demandes de l'acheteur connecté"""
-    demands = db.query(Demand).filter(Demand.acheteur_id == current_user.id).all()
-    return demands
+    return (
+        db.query(Demand)
+        .options(joinedload(Demand.product), joinedload(Demand.acheteur))
+        .filter(Demand.acheteur_id == current_user.id)
+        .all()
+    )

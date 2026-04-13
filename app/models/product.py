@@ -1,5 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy.orm import relationship
 from app.core.database import Base
+
 
 class Product(Base):
     __tablename__ = "products"
@@ -9,3 +11,6 @@ class Product(Base):
     categorie = Column(String(100))
     description = Column(Text)
     unite = Column(String(20), default="kg")
+
+    offers = relationship("Offer", back_populates="product")
+    demands = relationship("Demand", back_populates="product")
