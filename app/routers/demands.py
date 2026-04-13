@@ -1,11 +1,9 @@
-# app/routers/demands.py
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import asc, desc
 from typing import Optional
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.models.demand import Demand
 from app.models.user import User
 from app.schemas.demand import DemandCreate, DemandRead
@@ -43,8 +41,12 @@ def create_demand(
 @router.get("/")
 def get_demands(
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),  # ✅ Optionnel
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),
+    exclude_current_user: bool = Query(
+        False, description="Exclure mes propres demandes"
+    ),  # ✅ NOUVEAU
     region: Optional[str] = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
@@ -52,6 +54,10 @@ def get_demands(
     query = db.query(Demand).options(
         joinedload(Demand.product), joinedload(Demand.acheteur)
     )
+
+    # ✅ NOUVEAU : Exclure les demandes de l'utilisateur connecté
+    if exclude_current_user and current_user:
+        query = query.filter(Demand.acheteur_id != current_user.id)
 
     # ✅ FILTRE REGION
     if region:
@@ -71,7 +77,7 @@ def get_demands(
     else:
         query = query.order_by(desc(sort_column))
 
-    # ✅ TOTAL AVANT PAGINATION
+    # ✅ TOTAL APRÈS FILTRAGE, AVANT PAGINATION
     total = query.count()
 
     # ✅ PAGINATION
@@ -82,7 +88,7 @@ def get_demands(
         "total": total,
         "page": page,
         "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 1,
     }
 
 

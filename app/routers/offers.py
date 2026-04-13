@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import asc, desc
 from typing import Optional
 from app.core.database import get_db
-from app.core.security import get_current_user
+from app.core.security import get_current_user, get_optional_current_user
 from app.models.offer import Offer
 from app.models.user import User
 from app.schemas.offer import OfferCreate, OfferRead
@@ -30,7 +30,6 @@ def create_offer(
 
     offer = crud_offer.create(db, offer_dict)
 
-    # Retourner avec les relations
     return (
         db.query(Offer)
         .options(joinedload(Offer.product), joinedload(Offer.producteur))
@@ -42,8 +41,12 @@ def create_offer(
 @router.get("/")
 def get_offers(
     db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_optional_current_user),  # ✅ Optionnel
     page: int = Query(1, ge=1),
     page_size: int = Query(12, ge=1, le=100),
+    exclude_current_user: bool = Query(
+        False, description="Exclure mes propres offres"
+    ),  # ✅ NOUVEAU
     region: Optional[str] = None,
     sort_by: str = "created_at",
     sort_order: str = "desc",
@@ -51,6 +54,10 @@ def get_offers(
     query = db.query(Offer).options(
         joinedload(Offer.product), joinedload(Offer.producteur)
     )
+
+    # ✅ NOUVEAU : Exclure les offres de l'utilisateur connecté
+    if exclude_current_user and current_user:
+        query = query.filter(Offer.producteur_id != current_user.id)
 
     # ✅ FILTRE REGION
     if region:
@@ -70,7 +77,7 @@ def get_offers(
     else:
         query = query.order_by(desc(sort_column))
 
-    # ✅ TOTAL AVANT PAGINATION
+    # ✅ TOTAL APRÈS FILTRAGE, AVANT PAGINATION
     total = query.count()
 
     # ✅ PAGINATION
@@ -81,7 +88,7 @@ def get_offers(
         "total": total,
         "page": page,
         "page_size": page_size,
-        "total_pages": (total + page_size - 1) // page_size,
+        "total_pages": (total + page_size - 1) // page_size if total > 0 else 1,
     }
 
 
@@ -114,7 +121,14 @@ def update_offer(
         )
 
     offer_dict = offer_in.model_dump(exclude_unset=True)
-    return crud_offer.update(db, offer_id, offer_dict)
+    crud_offer.update(db, offer_id, offer_dict)
+
+    return (
+        db.query(Offer)
+        .options(joinedload(Offer.product), joinedload(Offer.producteur))
+        .filter(Offer.id == offer_id)
+        .first()
+    )
 
 
 @router.delete("/{offer_id}")
