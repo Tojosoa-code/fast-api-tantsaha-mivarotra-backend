@@ -29,5 +29,5 @@ class Offer(Base):
     statut = Column(String(20), default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    producteur = relationship("User")
-    product = relationship("Product")
+    producteur = relationship("User", back_populates="offers")
+    product = relationship("Product", back_populates="offers")

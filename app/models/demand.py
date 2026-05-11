@@ -28,5 +28,5 @@ class Demand(Base):
     statut = Column(String(20), default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    acheteur = relationship("User")
-    product = relationship("Product")
+    acheteur = relationship("User", back_populates="demands")
+    product = relationship("Product", back_populates="demands")
